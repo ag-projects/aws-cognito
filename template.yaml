@@ -22,7 +22,8 @@ Resources:
       MemorySize: 512
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
-          PARAM1: VALUE
+          MY_COGNITO_POOL_APP_CLIENT_ID: 31q0jknhv07b11plj43dp3ckar
+          MY_COGNITO_POOL_APP_CLIENT_SECRET: 12u42aq1op7seu31jknidj4p45vodb1722jluahd7jf6ntan7k8v
       Events:
         CreateUser:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
