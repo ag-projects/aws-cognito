@@ -1,8 +1,5 @@
 package com.appsdeveloperblog.aws.lambda;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -14,50 +11,41 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
-/**
- * Handler for requests to Lambda function.
- */
-public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class ConfirmUserHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final CognitoUserService cognitoUserService;
     private final String appClientId;
     private final String appClientSecret;
 
-    public CreateUserHandler() {
+    public ConfirmUserHandler() {
         this.cognitoUserService = new CognitoUserService(System.getenv("AWS_REGION"));
         this.appClientId = Utils.decryptKey("MY_COGNITO_POOL_APP_CLIENT_ID");
         this.appClientSecret = Utils.decryptKey("MY_COGNITO_POOL_APP_CLIENT_SECRET");
     }
 
-    public CreateUserHandler(CognitoUserService cognitoUserService, String appClientId, String appClientSecret) {
-        this.cognitoUserService = cognitoUserService;
-        this.appClientId = appClientId;
-        this.appClientSecret = appClientSecret;
-    }
-
-
-    public APIGatewayProxyResponseEvent handleRequest(final APIGatewayProxyRequestEvent input, final Context context) {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/json");
-
-        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent()
-                .withHeaders(headers);
-
-        String requestBody = input.getBody();
+    @Override
+    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+        APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
         LambdaLogger logger = context.getLogger();
-        logger.log("Org JSON body " + requestBody);
-        JsonObject userDetails = JsonParser.parseString(requestBody).getAsJsonObject();
 
         try {
-            JsonObject createUserResult = cognitoUserService.createUser(userDetails, appClientId, appClientSecret);
+            String requestBodyJsonString = input.getBody();
+            JsonObject requestBody = JsonParser.parseString(requestBodyJsonString).getAsJsonObject();
+            String email = requestBody.get("email").getAsString();
+            String confirmationCode = requestBody.get("code").getAsString();
+
+            JsonObject confirmUserResult = cognitoUserService.confirmUserSignup(appClientId, appClientSecret, email, confirmationCode);
             response.withStatusCode(200);
-            response.withBody(new Gson().toJson(createUserResult, JsonObject.class));
+            response.withBody(new Gson().toJson(confirmUserResult, JsonObject.class));
         } catch (AwsServiceException e) {
             logger.log(e.awsErrorDetails().errorMessage());
-            response.withStatusCode(500);
             response.withBody(e.awsErrorDetails().errorMessage());
+            response.withStatusCode(e.awsErrorDetails().sdkHttpResponse().statusCode());
+        } catch (Exception e) {
+            logger.log(e.getMessage());
+            response.withStatusCode(500);
+            response.withBody(e.getMessage());
         }
         return response;
     }
-
 }
