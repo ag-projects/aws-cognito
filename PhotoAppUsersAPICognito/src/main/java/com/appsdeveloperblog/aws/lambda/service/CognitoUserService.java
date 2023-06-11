@@ -128,6 +128,22 @@ public class CognitoUserService {
         return addUserToGroupResponse;
     }
 
+    public JsonObject getUser(String accessToken) {
+        GetUserRequest getUserRequest = GetUserRequest.builder().accessToken(accessToken).build();
+        GetUserResponse getUserResponse = cognitoIdentityProviderClient.getUser(getUserRequest);
+
+        JsonObject getUserResult = new JsonObject();
+        getUserResult.addProperty("isSuccessful", getUserResponse.sdkHttpResponse().isSuccessful());
+        getUserResult.addProperty("statusCode", getUserResponse.sdkHttpResponse().statusCode());
+
+        JsonObject userDetails = new JsonObject();
+        List<AttributeType> userAttributes = getUserResponse.userAttributes();
+        userAttributes.forEach(attribute -> userDetails.addProperty(attribute.name(), attribute.value()));
+        getUserResult.add("user", userDetails);
+
+        return getUserResult;
+    }
+
     public String calculateSecretHash(String userPoolClientId, String userPoolClientSecret, String userName) {
         final String HMAC_SHA256_ALGORITHM = "HmacSHA256";
 
